@@ -1,5 +1,7 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timezone
 from fastapi import HTTPException
 
@@ -7,9 +9,11 @@ from src.backend.models.book import Book
 from src.backend.models.author import Author
 from src.backend.schemas.book_schemas import BookCreate, BookResponse
 
+async def add_book(session: AsyncSession, book_create: BookCreate) -> BookResponse:
+    stmt = select(Author).where(Author.author_id.in_(book_create.author_ids))
 
-def add_book(session: Session, book_create: BookCreate) -> BookResponse:
-    authors = session.query(Author).filter(Author.author_id.in_(book_create.author_ids)).all()
+    result = await session.execute(stmt)
+    authors = list(result.scalars().all())
 
     if not authors:
         raise HTTPException(status_code=404, detail="Author not found")
@@ -22,45 +26,70 @@ def add_book(session: Session, book_create: BookCreate) -> BookResponse:
     )
 
     session.add(book)
-    session.commit()
-    session.refresh(book)
+    await session.commit()
+    await session.refresh(book)
 
     book_response = BookResponse.model_validate(book)
     return book_response
 
 
-def update_book(session: Session, book_id: int, book_update: BookCreate) -> Optional[BookResponse]:
-    stmt = session.query(Book).where(Book.book_id == book_id)
-    existing_book = session.scalars(stmt).one_or_none()
+async def update_book(session: AsyncSession, book_id: int, book_update: BookCreate) -> Optional[BookResponse]:
+    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
+    result = await session.execute(stmt)
+    existing_book = result.scalars().one_or_none()
 
     if existing_book is None:
         return None
-    for key, value in book_update.model_dump().items():
+
+
+    update_data = book_update.model_dump(exclude={"author_ids"})
+    for key, value in update_data.items():
         setattr(existing_book, key, value)
-    session.commit()
-    session.refresh(existing_book)
-    return existing_book
 
-def delete_book(session: Session, book_id: int) -> Optional[BookResponse]:
-    stmt = session.query(Book).where(Book.book_id == book_id)
-    existing_book = session.scalars(stmt).one_or_none()
+    if book_update.author_ids:
+        author_stmt = select(Author).where(Author.author_id.in_(book_update.author_ids))
+        author_result = await session.execute(author_stmt)
+        new_authors = list(author_result.scalars().all())
+
+        if not new_authors:
+            raise HTTPException(status_code=404, detail="Authors not found")
+
+        existing_book.authors = new_authors
+
+    await session.commit()
+    await session.refresh(existing_book)
+
+    return BookResponse.model_validate(existing_book)
+
+
+async def delete_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
+    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
+    result = await session.execute(stmt)
+    existing_book = result.scalars().one_or_none()
 
     if existing_book is None:
         return None
 
-    session.delete(existing_book)
-    session.commit()
-    session.refresh(existing_book)
-    return existing_book
+    await session.delete(existing_book)
+    await session.commit()
 
-def get_book(session: Session, book_id: int) -> Optional[BookResponse]:
-    stmt = session.query(Book).where(Book.book_id == book_id)
-    existing_book = session.scalars(stmt).one_or_none()
+    return BookResponse.model_validate(existing_book)
+
+
+async def get_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
+    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
+    result = await session.execute(stmt)
+    existing_book = result.scalars().one_or_none()
+
     if existing_book is None:
         return None
-    return existing_book
 
-def get_books(session: Session) -> List[BookResponse]:
-    stmt = session.query(Book)
-    books = session.scalars(stmt).all()
+    return BookResponse.model_validate(existing_book)
+
+
+async def get_books(session: AsyncSession) -> List[BookResponse]:
+    stmt = select(Book).options(selectinload(Book.authors))
+    result = await session.execute(stmt)
+    books = result.scalars().all()
+
     return [BookResponse.model_validate(book) for book in books]

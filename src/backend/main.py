@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
-app = FastAPI()
+from src.backend.routers import auth, book_routers
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+
+app = FastAPI()
+app.include_router(auth.router)
+app.include_router(book_routers.book_router)
