@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List
-from datetime import datetime
 
 from sqlalchemy import String
 from sqlalchemy.orm import relationship, Mapped, mapped_column

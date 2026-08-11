@@ -23,7 +23,7 @@ class Book(Base):
         back_populates="books"
     )
 
-    favorited_by: Mapped[List["User"]] = relationship(
+    favorited_by: Mapped[List[User]] = relationship(
         secondary=user_favorite_books,
         back_populates="favorite_books"
     )
