@@ -10,8 +10,18 @@ from src.backend.schemas.author_schemas import AuthorResponse, AuthorCreate
 
 async def add_author(session: AsyncSession, author_create: AuthorCreate) -> AuthorResponse:
     author = Author(
-        **author_create.model_dump()
+        **author_create.model_dump(exclude={"book_ids"})
     )
+
+    if author_create.book_ids:
+        stmt = select(Book).where(Book.book_id.in_(author_create.book_ids))
+        result = await session.execute(stmt)
+        books = list(result.scalars().all())
+
+        if not books:
+            raise HTTPException(status_code=404, detail="Books not found")
+
+        author.books = books
 
     session.add(author)
     await session.commit()
@@ -31,14 +41,14 @@ async def update_author(session: AsyncSession, author_id: int, author_update: Au
         setattr(existing_book, key, value)
 
     if author_update.book_ids:
-        book_stmt = select(Book).where(Book.book_ids.in_(author_update.book_ids)).options(selectinload(Author.books))
+        book_stmt = select(Book).where(Book.book_id.in_(author_update.book_ids))
         result = await session.execute(book_stmt)
         new_books = list(result.scalars().all())
 
         if not new_books:
             raise HTTPException(status_code=404, detail="Books not found")
 
-        existing_book.book_ids = new_books
+        existing_book.books = new_books
 
     await session.commit()
     await session.refresh(existing_book)
