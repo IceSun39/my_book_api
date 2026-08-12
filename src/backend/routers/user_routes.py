@@ -19,8 +19,6 @@ async def get_users(session: AsyncSession = Depends(get_session), admin_user: Us
 @user_router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: int, session: AsyncSession = Depends(get_session), admin_user: User = Depends(get_current_admin_user)):
     user = await user_services.get_user(session, user_id)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @user_router.post("/", response_model=UserResponse, status_code=201)
@@ -34,6 +32,4 @@ async def update_user(user_id: int, user: UserUpdate, session: AsyncSession = De
 @user_router.delete("/{user_id}", response_model=Optional[UserResponse])
 async def delete_user(user_id: int, session: AsyncSession = Depends(get_session), admin_user: User = Depends(get_current_admin_user)):
     user = await user_services.delete_user(session, user_id)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
     return user
