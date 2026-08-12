@@ -9,6 +9,20 @@ from src.backend.models.book import Book
 from src.backend.models.author import Author
 from src.backend.models.user import User
 from src.backend.schemas.book_schemas import BookCreate, BookResponse
+from src.backend.services.user_services import get_user
+
+async def get_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
+    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
+    result = await session.execute(stmt)
+    existing_book = result.scalars().one_or_none()
+
+    if existing_book is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Book not found"
+        )
+
+    return BookResponse.model_validate(existing_book)
 
 async def add_book(session: AsyncSession, book_create: BookCreate) -> BookResponse:
     stmt = select(Author).where(Author.author_id.in_(book_create.author_ids))
@@ -43,14 +57,8 @@ async def add_book(session: AsyncSession, book_create: BookCreate) -> BookRespon
     return book_response
 
 
-async def update_book(session: AsyncSession, book_id: int, book_update: BookCreate) -> Optional[BookResponse]:
-    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
-    result = await session.execute(stmt)
-    existing_book = result.scalars().one_or_none()
-
-    if existing_book is None:
-        return None
-
+async def update_book(session: AsyncSession, book_id: int, book_update: BookCreate,) -> Optional[BookResponse]:
+    existing_book = get_book(session, book_id)
 
     update_data = book_update.model_dump(exclude={"author_ids"})
     for key, value in update_data.items():
@@ -75,30 +83,13 @@ async def update_book(session: AsyncSession, book_id: int, book_update: BookCrea
     return BookResponse.model_validate(existing_book)
 
 
-async def delete_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
-    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
-    result = await session.execute(stmt)
-    existing_book = result.scalars().one_or_none()
-
-    if existing_book is None:
-        return None
+async def delete_book(session: AsyncSession, book_id: int) -> BookResponse:
+    existing_book = get_book(session, book_id)
 
     await session.delete(existing_book)
     await session.commit()
 
     return BookResponse.model_validate(existing_book)
-
-
-async def get_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
-    stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
-    result = await session.execute(stmt)
-    existing_book = result.scalars().one_or_none()
-
-    if existing_book is None:
-        return None
-
-    return BookResponse.model_validate(existing_book)
-
 
 async def get_all_books(session: AsyncSession) -> List[BookResponse]:
     stmt = select(Book).options(selectinload(Book.authors))
