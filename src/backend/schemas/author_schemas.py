@@ -12,7 +12,7 @@ class BookResponse(BaseModel):
 class AuthorCreate(BaseModel):
     fullname: Annotated[str, Field(min_length=1, max_length=100)]
     email: Annotated[str, Field(min_length=1, max_length=100)]
-    books: Annotated[List[BookResponse], Field(min_length=1)]
+    book_ids: Annotated[List[int], Field(min_length=1)]
 
 class AuthorResponse(BaseModel):
     fullname: Annotated[str, Field(min_length=1, max_length=100)]
