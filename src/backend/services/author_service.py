@@ -9,6 +9,16 @@ from src.backend.models.author import Author
 from src.backend.schemas.author_schemas import AuthorResponse, AuthorCreate
 
 
+async def _get_author_db(session: AsyncSession, author_id: int) -> Author:
+    stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
+    result = await session.execute(stmt)
+    existing_author = result.scalar_one_or_none()
+
+    if existing_author is None:
+        raise HTTPException(status_code=404, detail="Author not found")
+    return existing_author
+
+
 async def add_author(session: AsyncSession, author_create: AuthorCreate) -> AuthorResponse:
     author = Author(
         **author_create.model_dump(exclude={"book_ids"})
@@ -26,21 +36,17 @@ async def add_author(session: AsyncSession, author_create: AuthorCreate) -> Auth
 
     session.add(author)
     await session.commit()
-    await session.refresh(author)
-    return AuthorResponse.model_validate(author)
+
+    complete_author = await _get_author_db(session, author.author_id)
+    return AuthorResponse.model_validate(complete_author)
 
 
 async def update_author(session: AsyncSession, author_id: int, author_update: AuthorCreate) -> AuthorResponse:
-    stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
-    result = await session.execute(stmt)
-    existing_book = result.scalar_one_or_none()
-
-    if existing_book is None:
-        raise HTTPException(status_code=404, detail="Author not found")
+    existing_author = await _get_author_db(session, author_id)
 
     update_data = author_update.model_dump(exclude={"book_ids"})
     for key, value in update_data.items():
-        setattr(existing_book, key, value)
+        setattr(existing_author, key, value)
 
     if author_update.book_ids:
         book_stmt = select(Book).where(Book.book_id.in_(author_update.book_ids))
@@ -50,35 +56,25 @@ async def update_author(session: AsyncSession, author_id: int, author_update: Au
         if not new_books:
             raise HTTPException(status_code=404, detail="Books not found")
 
-        existing_book.books = new_books
+        existing_author.books = new_books
 
     await session.commit()
-    await session.refresh(existing_book)
+    
+    complete_author = await _get_author_db(session, author_id)
+    return AuthorResponse.model_validate(complete_author)
 
-    return AuthorResponse.model_validate(existing_book)
 
-
-async def delete_author(session: AsyncSession, author_id: int) -> Optional[AuthorResponse]:
-    stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
-    result = await session.execute(stmt)
-    existing_author = result.scalar_one_or_none()
-
-    if existing_author is None:
-        return None
+async def delete_author(session: AsyncSession, author_id: int) -> None:
+    existing_author = await _get_author_db(session, author_id)
 
     await session.delete(existing_author)
     await session.commit()
 
-    return AuthorResponse.model_validate(existing_author)
+    return None
 
 
 async def get_author(session: AsyncSession, author_id: int) -> Optional[AuthorResponse]:
-    stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
-    result = await session.execute(stmt)
-    existing_author = result.scalar_one_or_none()
-
-    if existing_author is None:
-        return None
+    existing_author = await _get_author_db(session, author_id)
 
     return AuthorResponse.model_validate(existing_author)
 
