@@ -95,9 +95,15 @@ async def get_all_books(session: AsyncSession) -> List[BookResponse]:
 
     return [BookResponse.model_validate(book) for book in books]
 
-async def get_favorite_books(session: AsyncSession, user_id: int) -> List[BookResponse]:
-    stmt = select(User.favorite_books).where(User.user_id == user_id).options(selectinload(User.books)).order_by(User.favorite_books.desc())
-    result = await session.execute(stmt)
-    favorite_books = list(result.scalars().all())
 
-    return [BookResponse.model_validate(book) for book in favorite_books]
+async def get_favorite_books(session: AsyncSession, user_id: int) -> List[Book]:
+    stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        return []
+
+    sorted_books = sorted(user.favorite_books, key=lambda book: book.book_id, reverse=True)
+
+    return sorted_books
