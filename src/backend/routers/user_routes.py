@@ -12,7 +12,7 @@ user_router = APIRouter(
 
 @user_router.get("/", response_model=UserResponse)
 async def get_users(session: AsyncSession = Depends(get_session)):
-    return await user_services.get_users(session)
+    return await user_services.get_all_users(session)
 
 @user_router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: int, session: AsyncSession = Depends(get_session)):

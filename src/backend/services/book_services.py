@@ -87,7 +87,7 @@ async def get_book(session: AsyncSession, book_id: int) -> Optional[BookResponse
     return BookResponse.model_validate(existing_book)
 
 
-async def get_books(session: AsyncSession) -> List[BookResponse]:
+async def get_all_books(session: AsyncSession) -> List[BookResponse]:
     stmt = select(Book).options(selectinload(Book.authors))
     result = await session.execute(stmt)
     books = result.scalars().all()

@@ -72,7 +72,7 @@ async def get_user(session: AsyncSession, user_id: int) -> Optional[UserResponse
     return UserResponse.model_validate(existing_user)
 
 
-async def get_users(session: AsyncSession) -> List[UserResponse]:
+async def get_all_users(session: AsyncSession) -> List[UserResponse]:
     stmt = select(User).order_by(User.user_id).options(selectinload(User.favorite_books))
     result = await session.execute(stmt)
     existing_users = result.scalars().all()

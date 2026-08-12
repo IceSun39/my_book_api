@@ -11,7 +11,7 @@ book_router = APIRouter(
 
 @book_router.get("/", response_model=BookResponse)
 async def get_books(session: AsyncSession = Depends(get_session)):
-    return await book_services.get_books(session)
+    return await book_services.get_all_books(session)
 
 @book_router.get("/{book_id}", response_model=BookResponse)
 async def get_book(book_id: int, session: AsyncSession = Depends(get_session)):
