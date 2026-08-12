@@ -3,7 +3,7 @@ from typing import Annotated, List
 from datetime import datetime
 
 class BookResponse(BaseModel):
-    ConfigDict = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
 
     book_id: int
     book_title: str
