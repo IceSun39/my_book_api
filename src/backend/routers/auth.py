@@ -18,9 +18,12 @@ from src.backend.core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+auth_router = APIRouter(
+    prefix="/auth",
+    tags=["Authentication"]
+)
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@auth_router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate, session: AsyncSession = Depends(get_session)):
     existing_user = await get_user_by_email(session, user_data.email)
     if existing_user:
@@ -44,7 +47,7 @@ async def register_user(user_data: UserCreate, session: AsyncSession = Depends(g
     await session.refresh(new_user)
     return new_user
 
-@router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
+@auth_router.post("/login", response_model=Token, status_code=status.HTTP_200_OK)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     session: AsyncSession = Depends(get_session)
