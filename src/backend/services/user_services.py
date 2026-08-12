@@ -23,9 +23,11 @@ async def add_user(session: AsyncSession, user_create: UserCreate) -> UserRespon
 
     session.add(new_user)
     await session.commit()
-    await session.refresh(new_user)
+    stmt = select(User).where(User.user_id == new_user.user_id).options(selectinload(User.favorite_books))
+    result = await session.execute(stmt)
+    complete_user = result.scalar_one()
 
-    return UserResponse.model_validate(new_user)
+    return UserResponse.model_validate(complete_user)
 
 async def update_user(session: AsyncSession, user_id: int,user_update: UserUpdate) -> UserResponse:
     stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))

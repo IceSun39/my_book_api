@@ -19,10 +19,15 @@ async def add_book(session: AsyncSession, book_create: BookCreate) -> BookRespon
     if not authors:
         raise HTTPException(status_code=404, detail="Author not found")
 
+    publish_date_naive = book_create.publish_date.replace(
+        tzinfo=None) if book_create.publish_date.tzinfo else book_create.publish_date
+
+    created_at_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+
     book = Book(
         book_title=book_create.book_title,
-        publish_date=book_create.publish_date,
-        created_at=datetime.now(timezone.utc),
+        publish_date=publish_date_naive,
+        created_at=created_at_naive,
         authors=authors
     )
 
@@ -30,7 +35,11 @@ async def add_book(session: AsyncSession, book_create: BookCreate) -> BookRespon
     await session.commit()
     await session.refresh(book)
 
-    book_response = BookResponse.model_validate(book)
+    stmt_refresh = select(Book).where(Book.book_id == book.book_id).options(selectinload(Book.authors))
+    result_refresh = await session.execute(stmt_refresh)
+    complete_book = result_refresh.scalar_one()
+
+    book_response = BookResponse.model_validate(complete_book)
     return book_response
 
 
@@ -56,6 +65,9 @@ async def update_book(session: AsyncSession, book_id: int, book_update: BookCrea
             raise HTTPException(status_code=404, detail="Authors not found")
 
         existing_book.authors = new_authors
+
+    if "publish_date" in update_data and update_data["publish_date"].tzinfo:
+        update_data["publish_date"] = update_data["publish_date"].replace(tzinfo=None)
 
     await session.commit()
     await session.refresh(existing_book)
