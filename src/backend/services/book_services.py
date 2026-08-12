@@ -7,6 +7,7 @@ from fastapi import HTTPException
 
 from src.backend.models.book import Book
 from src.backend.models.author import Author
+from src.backend.models.user import User
 from src.backend.schemas.book_schemas import BookCreate, BookResponse
 
 async def add_book(session: AsyncSession, book_create: BookCreate) -> BookResponse:
@@ -93,3 +94,10 @@ async def get_all_books(session: AsyncSession) -> List[BookResponse]:
     books = result.scalars().all()
 
     return [BookResponse.model_validate(book) for book in books]
+
+async def get_favorite_books(session: AsyncSession, user_id: int) -> List[BookResponse]:
+    stmt = select(User.favorite_books).where(User.user_id == user_id).options(selectinload(User.books)).order_by(User.favorite_books.desc())
+    result = await session.execute(stmt)
+    favorite_books = list(result.scalars().all())
+
+    return [BookResponse.model_validate(book) for book in favorite_books]
