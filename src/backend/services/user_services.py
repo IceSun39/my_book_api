@@ -1,12 +1,12 @@
 from typing import List, Optional
 
-from sqlalchemy import select, true
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from sqlalchemy.orm import selectinload
 
 from src.backend.models.user import User
-from src.backend.schemas.user_schemas import UserCreate, UserResponse
+from src.backend.schemas.user_schemas import UserCreate, UserResponse, UserUpdate
 from src.backend.core.security import get_password_hash
 
 
@@ -27,7 +27,7 @@ async def add_user(session: AsyncSession, user_create: UserCreate) -> UserRespon
 
     return UserResponse.model_validate(new_user)
 
-async def update_user(session: AsyncSession, user_id: int,user_update: UserCreate) -> UserResponse:
+async def update_user(session: AsyncSession, user_id: int,user_update: UserUpdate) -> UserResponse:
     stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
     result = await session.execute(stmt)
     user = result.scalar_one_or_none()
