@@ -12,8 +12,13 @@ class BookResponse(BaseModel):
 class AuthorCreate(BaseModel):
     fullname: Annotated[str, Field(min_length=1, max_length=100)]
     email: Annotated[str, Field(min_length=1, max_length=100)]
-    book_ids: Optional[List[int]] = None
+    book_ids: List[int] = Field(default_factory=list)
+
 
 class AuthorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    author_id: int
     fullname: Annotated[str, Field(min_length=1, max_length=100)]
-    books: Annotated[List[BookResponse], Field(min_length=1)]
+    email: Annotated[str, Field(min_length=1, max_length=100)]
+    books: List[BookResponse] = Field(default_factory=list)

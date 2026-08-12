@@ -8,6 +8,7 @@ from src.backend.models.book import Book
 from src.backend.models.author import Author
 from src.backend.schemas.author_schemas import AuthorResponse, AuthorCreate
 
+
 async def add_author(session: AsyncSession, author_create: AuthorCreate) -> AuthorResponse:
     author = Author(
         **author_create.model_dump(exclude={"book_ids"})
@@ -28,12 +29,13 @@ async def add_author(session: AsyncSession, author_create: AuthorCreate) -> Auth
     await session.refresh(author)
     return AuthorResponse.model_validate(author)
 
+
 async def update_author(session: AsyncSession, author_id: int, author_update: AuthorCreate) -> AuthorResponse:
     stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
     result = await session.execute(stmt)
     existing_book = result.scalar_one_or_none()
 
-    if existing_book in None:
+    if existing_book is None:
         raise HTTPException(status_code=404, detail="Author not found")
 
     update_data = author_update.model_dump(exclude={"book_ids"})
@@ -55,6 +57,7 @@ async def update_author(session: AsyncSession, author_id: int, author_update: Au
 
     return AuthorResponse.model_validate(existing_book)
 
+
 async def delete_author(session: AsyncSession, author_id: int) -> Optional[AuthorResponse]:
     stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
     result = await session.execute(stmt)
@@ -67,6 +70,7 @@ async def delete_author(session: AsyncSession, author_id: int) -> Optional[Autho
     await session.commit()
 
     return AuthorResponse.model_validate(existing_author)
+
 
 async def get_author(session: AsyncSession, author_id: int) -> Optional[AuthorResponse]:
     stmt = select(Author).where(Author.author_id == author_id).options(selectinload(Author.books))
@@ -84,8 +88,4 @@ async def get_all_authors(session: AsyncSession) -> List[AuthorResponse]:
     result = await session.execute(stmt)
     existing_authors = result.scalars().all()
 
-    return [Author.model_validate(author) for author in existing_authors]
-
-
-
-
+    return [AuthorResponse.model_validate(author) for author in existing_authors]
