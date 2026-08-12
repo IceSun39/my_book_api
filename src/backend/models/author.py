@@ -16,6 +16,6 @@ class Author(Base):
     fullname: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(100))
     books: Mapped[List[Book]] = relationship(
-        secondary=books_and_authors,
+        secondary="books_and_authors",
         back_populates="authors"
     )

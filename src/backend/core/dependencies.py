@@ -12,7 +12,7 @@ from src.backend.services.user_services import get_user_by_email
 from src.backend.models.user import User
 
 load_dotenv()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")

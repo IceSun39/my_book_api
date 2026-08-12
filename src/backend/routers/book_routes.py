@@ -16,7 +16,6 @@ book_router = APIRouter(
 async def get_books(session: AsyncSession = Depends(get_session)):
     return await book_services.get_all_books(session)
 
-# ВИПРАВЛЕНО: /favorite піднято вище за /{book_id}
 @book_router.get("/favorite", response_model=List[BookResponse])
 async def get_favorite(session: AsyncSession = Depends(get_session), current_user: User = Depends(get_current_user)):
     return await book_services.get_favorite_books(session, current_user.user_id)

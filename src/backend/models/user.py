@@ -21,6 +21,6 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column()
 
     favorite_books: Mapped[List[Book]] = relationship(
-        secondary=user_favorite_books,
+        secondary="user_favorite_books",
         back_populates="favorited_by"
     )
