@@ -1,5 +1,3 @@
-from sqlalchemy.util import await_only
-
 import src.backend.services.author_service as author_service
 from src.backend.schemas.author_schemas import AuthorResponse, AuthorCreate
 from src.backend.database.database import get_session

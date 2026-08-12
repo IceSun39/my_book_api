@@ -47,7 +47,7 @@ async def update_book(session: AsyncSession, book_id: int, book_update: BookCrea
         setattr(existing_book, key, value)
 
     if book_update.author_ids:
-        author_stmt = select(Author).where(Author.author_id.in_(book_update.author_ids))
+        author_stmt = select(Author).where(Author.author_id.in_(book_update.author_ids)).options(selectinload(Book.authors))
         author_result = await session.execute(author_stmt)
         new_authors = list(author_result.scalars().all())
 
