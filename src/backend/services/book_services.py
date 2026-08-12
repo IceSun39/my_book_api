@@ -58,7 +58,7 @@ async def add_book(session: AsyncSession, book_create: BookCreate) -> BookRespon
 
 
 async def update_book(session: AsyncSession, book_id: int, book_update: BookCreate,) -> Optional[BookResponse]:
-    existing_book = get_book(session, book_id)
+    existing_book = await get_book(session, book_id)
 
     update_data = book_update.model_dump(exclude={"author_ids"})
     for key, value in update_data.items():
@@ -84,7 +84,7 @@ async def update_book(session: AsyncSession, book_id: int, book_update: BookCrea
 
 
 async def delete_book(session: AsyncSession, book_id: int) -> BookResponse:
-    existing_book = get_book(session, book_id)
+    existing_book = await get_book(session, book_id)
 
     await session.delete(existing_book)
     await session.commit()
@@ -110,3 +110,28 @@ async def get_favorite_books(session: AsyncSession, user_id: int) -> List[Book]:
     sorted_books = sorted(user.favorite_books, key=lambda book: book.book_id, reverse=True)
 
     return sorted_books
+
+async def add_favorite(session: AsyncSession, book_id: int, user_id: int) -> dict:
+    favorite_book = await get_book(session, book_id)
+
+    user = await get_user(session, user_id)
+
+    if any(b.book_id == book_id for b in user.favorite_books):
+        return {"message": "Book already favorited"}
+
+    user.favorite_books.append(favorite_book)
+    await session.commit()
+    return {'message': f'{favorite_book.book_title} added to {user_id} favorite_books'}
+
+async def remove_favorite(session: AsyncSession, book_id: int, user_id: int) -> dict:
+    user = await get_user(session, user_id)
+
+    book_to_remove = next((b for b in user.favorite_books if b.book_id == book_id), None)
+
+    if not book_to_remove:
+        return {"message": "Book is not favorited"}
+
+    user.favorite_books.remove(book_to_remove)
+
+    await session.commit()
+    return {'message': f'{book_to_remove.book_title} removed from favorites'}
