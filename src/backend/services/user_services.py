@@ -9,6 +9,20 @@ from src.backend.models.user import User
 from src.backend.schemas.user_schemas import UserCreate, UserResponse, UserUpdate
 from src.backend.core.security import get_password_hash
 
+async def _get_user_db(session: AsyncSession, user_id: int) -> User:
+    """Шукає користувача в базі і повертає ORM-модель (або кидає 404)"""
+    stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
+    result = await session.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+async def get_user(session: AsyncSession, user_id: int) -> UserResponse:
+    user = await _get_user_db(session, user_id)
+    return UserResponse.model_validate(user)
+
 
 async def add_user(session: AsyncSession, user_create: UserCreate) -> UserResponse:
     hashed_password = get_password_hash(user_create.password)
@@ -29,13 +43,9 @@ async def add_user(session: AsyncSession, user_create: UserCreate) -> UserRespon
 
     return UserResponse.model_validate(complete_user)
 
-async def update_user(session: AsyncSession, user_id: int,user_update: UserUpdate) -> UserResponse:
-    stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
-    result = await session.execute(stmt)
-    user = result.scalar_one_or_none()
 
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+async def update_user(session: AsyncSession, user_id: int, user_update: UserUpdate) -> UserResponse:
+    user = await _get_user_db(session, user_id)
 
     update_data = user_update.model_dump(exclude_unset=True)
 
@@ -46,33 +56,19 @@ async def update_user(session: AsyncSession, user_id: int,user_update: UserUpdat
     for key, value in update_data.items():
         setattr(user, key, value)
 
-
     await session.commit()
     await session.refresh(user)
+
     return UserResponse.model_validate(user)
 
 
-async def delete_user(session: AsyncSession, user_id: int) -> Optional[UserResponse]:
-    stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
-    result = await session.execute(stmt)
-    existing_user = result.scalar_one_or_none()
-    if existing_user is None:
-        return None
+async def delete_user(session: AsyncSession, user_id: int) -> None:
+    user = await _get_user_db(session, user_id)
 
-    await session.delete(existing_user)
+    await session.delete(user)
     await session.commit()
-    return UserResponse.model_validate(existing_user)
 
-async def get_user(session: AsyncSession, user_id: int) -> Optional[UserResponse]:
-    stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
-    result = await session.execute(stmt)
-    existing_user = result.scalar_one_or_none()
-
-    if existing_user is None:
-        return None
-
-    return UserResponse.model_validate(existing_user)
-
+    return None
 
 async def get_all_users(session: AsyncSession) -> List[UserResponse]:
     stmt = select(User).order_by(User.user_id).options(selectinload(User.favorite_books))
