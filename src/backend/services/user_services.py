@@ -9,6 +9,7 @@ from src.backend.models.user import User
 from src.backend.schemas.user_schemas import UserCreate, UserResponse, UserUpdate
 from src.backend.core.security import get_password_hash
 
+
 async def _get_user_db(session: AsyncSession, user_id: int) -> User:
     """Шукає користувача в базі і повертає ORM-модель (або кидає 404)"""
     stmt = select(User).where(User.user_id == user_id).options(selectinload(User.favorite_books))
@@ -18,6 +19,7 @@ async def _get_user_db(session: AsyncSession, user_id: int) -> User:
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
 
 async def get_user(session: AsyncSession, user_id: int) -> UserResponse:
     user = await _get_user_db(session, user_id)
@@ -69,6 +71,7 @@ async def delete_user(session: AsyncSession, user_id: int) -> None:
     await session.commit()
 
     return None
+
 
 async def get_all_users(session: AsyncSession) -> List[UserResponse]:
     stmt = select(User).order_by(User.user_id).options(selectinload(User.favorite_books))

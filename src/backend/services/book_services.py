@@ -1,4 +1,6 @@
 from typing import List, Optional
+
+from pydantic_core.core_schema import none_schema
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -9,20 +11,25 @@ from src.backend.models.book import Book
 from src.backend.models.author import Author
 from src.backend.models.user import User
 from src.backend.schemas.book_schemas import BookCreate, BookResponse
-from src.backend.services.user_services import get_user
+from src.backend.services.user_services import _get_user_db
 
-async def get_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
+
+async def _get_book_db(session: AsyncSession, book_id: int) -> Book:
     stmt = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
     result = await session.execute(stmt)
-    existing_book = result.scalars().one_or_none()
+    book = result.scalar_one_or_none()
 
-    if existing_book is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Book not found"
-        )
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    return book
+
+
+async def get_book(session: AsyncSession, book_id: int) -> Optional[BookResponse]:
+    existing_book = await _get_book_db(session, book_id)
 
     return BookResponse.model_validate(existing_book)
+
 
 async def add_book(session: AsyncSession, book_create: BookCreate) -> BookResponse:
     stmt = select(Author).where(Author.author_id.in_(book_create.author_ids))
@@ -57,15 +64,19 @@ async def add_book(session: AsyncSession, book_create: BookCreate) -> BookRespon
     return book_response
 
 
-async def update_book(session: AsyncSession, book_id: int, book_update: BookCreate,) -> Optional[BookResponse]:
-    existing_book = await get_book(session, book_id)
+async def update_book(session: AsyncSession, book_id: int, book_update: BookCreate) -> Optional[BookResponse]:
+    existing_book = await _get_book_db(session, book_id)
 
-    update_data = book_update.model_dump(exclude={"author_ids"})
+    update_data = book_update.model_dump(exclude={"author_ids"}, exclude_unset=True)
+
+    if "publish_date" in update_data and update_data["publish_date"].tzinfo:
+        update_data["publish_date"] = update_data["publish_date"].replace(tzinfo=None)
+
     for key, value in update_data.items():
         setattr(existing_book, key, value)
 
     if book_update.author_ids:
-        author_stmt = select(Author).where(Author.author_id.in_(book_update.author_ids)).options(selectinload(Book.authors))
+        author_stmt = select(Author).where(Author.author_id.in_(book_update.author_ids))
         author_result = await session.execute(author_stmt)
         new_authors = list(author_result.scalars().all())
 
@@ -74,22 +85,23 @@ async def update_book(session: AsyncSession, book_id: int, book_update: BookCrea
 
         existing_book.authors = new_authors
 
-    if "publish_date" in update_data and update_data["publish_date"].tzinfo:
-        update_data["publish_date"] = update_data["publish_date"].replace(tzinfo=None)
-
     await session.commit()
-    await session.refresh(existing_book)
 
-    return BookResponse.model_validate(existing_book)
+    stmt_refresh = select(Book).where(Book.book_id == book_id).options(selectinload(Book.authors))
+    result_refresh = await session.execute(stmt_refresh)
+    complete_book = result_refresh.scalar_one()
+
+    return BookResponse.model_validate(complete_book)
 
 
-async def delete_book(session: AsyncSession, book_id: int) -> BookResponse:
-    existing_book = await get_book(session, book_id)
+async def delete_book(session: AsyncSession, book_id: int) -> None:
+    existing_book = await _get_book_db(session, book_id)
 
     await session.delete(existing_book)
     await session.commit()
 
-    return BookResponse.model_validate(existing_book)
+    return None
+
 
 async def get_all_books(session: AsyncSession) -> List[BookResponse]:
     stmt = select(Book).options(selectinload(Book.authors))
@@ -111,10 +123,11 @@ async def get_favorite_books(session: AsyncSession, user_id: int) -> List[Book]:
 
     return sorted_books
 
-async def add_favorite(session: AsyncSession, book_id: int, user_id: int) -> dict:
-    favorite_book = await get_book(session, book_id)
 
-    user = await get_user(session, user_id)
+async def add_favorite(session: AsyncSession, book_id: int, user_id: int) -> dict:
+    favorite_book = await _get_book_db(session, book_id)
+
+    user = await _get_user_db(session, user_id)
 
     if any(b.book_id == book_id for b in user.favorite_books):
         return {"message": "Book already favorited"}
@@ -123,8 +136,9 @@ async def add_favorite(session: AsyncSession, book_id: int, user_id: int) -> dic
     await session.commit()
     return {'message': f'{favorite_book.book_title} added to {user_id} favorite_books'}
 
+
 async def remove_favorite(session: AsyncSession, book_id: int, user_id: int) -> dict:
-    user = await get_user(session, user_id)
+    user = await _get_user_db(session, user_id)
 
     book_to_remove = next((b for b in user.favorite_books if b.book_id == book_id), None)
 
