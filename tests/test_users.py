@@ -41,6 +41,33 @@ async def test_create_user_validation_error(async_client: AsyncClient):
     assert response.status_code == 422
 
 
+@pytest.mark.asyncio
+async def test_create_user_duplicate_email(async_client: AsyncClient):
+    """Тест перевірки на дублікат email (має повернути 409 Conflict)"""
+    payload = {
+        "email": "duplicate@test.com",
+        "first_name": "Оригінал",
+        "last_name": "Тестовий",
+        "password": "securepassword123"
+    }
+
+    # 1. Успішно створюємо першого користувача
+    response_1 = await async_client.post("/api/users/", json=payload)
+    assert response_1.status_code in [200, 201]
+
+    # 2. Намагаємось створити другого з тим самим email (можемо змінити ім'я, головне — email)
+    payload_duplicate = {
+        "email": "duplicate@test.com",
+        "first_name": "Клон",
+        "last_name": "Тестовий",
+        "password": "anotherpassword321"
+    }
+    response_2 = await async_client.post("/api/users/", json=payload_duplicate)
+
+    # Очікуємо статус 409 Conflict
+    assert response_2.status_code == 409
+    assert "already exists" in response_2.json()["detail"].lower()
+
 # --- GET (Отримання користувачів) ---
 
 @pytest.mark.asyncio

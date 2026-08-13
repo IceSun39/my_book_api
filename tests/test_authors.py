@@ -54,6 +54,28 @@ async def test_create_author_invalid_books(async_client: AsyncClient):
     assert response.json()["detail"] == "Books not found"
 
 
+@pytest.mark.asyncio
+async def test_create_author_duplicate_name(async_client: AsyncClient):
+    """Тест перевірки на дублікат автора за іменем (має повернути 409 Conflict)"""
+    payload = {
+        "fullname": "Унікальний Письменник",
+        "email": "writer1@test.com",
+        "book_ids": []
+    }
+
+    # 1. Створюємо першого автора
+    await async_client.post("/api/authors/", json=payload)
+
+    # 2. Намагаємось створити іншого автора з таким самим іменем
+    payload_duplicate = {
+        "fullname": "Унікальний Письменник",
+        "email": "writer2@test.com",
+        "book_ids": []
+    }
+    response = await async_client.post("/api/authors/", json=payload_duplicate)
+
+    assert response.status_code == 409
+
 # --- GET (Отримання) ---
 
 @pytest.mark.asyncio
