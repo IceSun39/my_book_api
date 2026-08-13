@@ -44,11 +44,22 @@ async def db_session(db_engine):
 
 @pytest_asyncio.fixture(scope="function")
 async def async_client(db_session):
+    mock_user = User(
+        user_id=999,
+        email="test_admin@test.com",
+        hashed_password="fake_hash",
+        first_name="Admin",
+        last_name="Test",
+        is_admin=True
+    )
+    db_session.add(mock_user)
+    await db_session.commit()
+
     async def override_get_session():
         yield db_session
 
     def override_get_current_admin_user():
-        return User(user_id=999, email="test_admin@test.com", is_admin=True)
+        return mock_user
 
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_current_admin_user] = override_get_current_admin_user

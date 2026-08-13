@@ -149,7 +149,7 @@ async def test_add_and_remove_favorite(async_client: AsyncClient, sample_author)
     book_id = book_res.json()["book_id"]
 
     # 2. Додаємо в улюблені (використовуємо твій роут, шлях залежить від твого book_routes)
-    add_res = await async_client.post(f"/api/books/{book_id}/favorite")
+    add_res = await async_client.post(f"/api/books/favorite/{book_id}")
     assert add_res.status_code in [200, 201]
 
     # 3. Перевіряємо, чи з'явилася в списку улюблених
@@ -158,5 +158,5 @@ async def test_add_and_remove_favorite(async_client: AsyncClient, sample_author)
     assert len(fav_res.json()) >= 1
 
     # 4. Видаляємо з улюблених
-    remove_res = await async_client.delete(f"/api/books/{book_id}/favorite")
+    remove_res = await async_client.delete(f"/api/books/favorite/{book_id}")
     assert remove_res.status_code in [200, 204]
