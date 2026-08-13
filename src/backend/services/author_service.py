@@ -21,6 +21,12 @@ async def _get_author_db(session: AsyncSession, author_id: int) -> Author:
 
 
 async def add_author(session: AsyncSession, author_create: AuthorCreate) -> AuthorResponse:
+    stmt = select(Author).where(Author.fullname == author_create.fullname).options(selectinload(Author.books))
+    result = await session.execute(stmt)
+    existing_author = result.scalar_one_or_none()
+    if existing_author:
+        raise HTTPException(status_code=409, detail="Author already exists")
+
     author = Author(
         **author_create.model_dump(exclude={"book_ids"})
     )

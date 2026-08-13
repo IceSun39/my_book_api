@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 class Author(Base):
     __tablename__ = "author"
     author_id: Mapped[int] = mapped_column(primary_key=True)
-    fullname: Mapped[str] = mapped_column(String(100))
-    email: Mapped[str] = mapped_column(String(100))
+    fullname: Mapped[str] = mapped_column(String(100), unique=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True)
     books: Mapped[List[Book]] = relationship(
         secondary="books_and_authors",
         back_populates="authors"
