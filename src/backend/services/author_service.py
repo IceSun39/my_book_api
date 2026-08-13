@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 
+from schemas.book_schemas import BookResponse
 from src.backend.models.book import Book
 from src.backend.models.author import Author
 from src.backend.schemas.author_schemas import AuthorResponse, AuthorCreate
@@ -85,3 +86,17 @@ async def get_all_authors(session: AsyncSession) -> List[AuthorResponse]:
     existing_authors = result.scalars().all()
 
     return [AuthorResponse.model_validate(author) for author in existing_authors]
+
+
+async def get_all_author_books(session: AsyncSession, author_id: int) -> List[BookResponse]:
+    await _get_author_db(session, author_id)
+
+    stmt = (
+        select(Book)
+        .where(Book.authors.any(Author.author_id == author_id))
+        .options(selectinload(Book.authors))
+    )
+    result = await session.execute(stmt)
+    existing_books = result.scalars().all()
+
+    return [BookResponse.model_validate(book) for book in existing_books]

@@ -18,6 +18,11 @@ async def get_authors(session: AsyncSession = Depends(get_session), current_user
     return await author_service.get_all_authors(session)
 
 
+@author_router.get("/{author_id/books}", response_model=List[AuthorResponse], status_code=200)
+async def get_all_books(author_id: int, session: AsyncSession = Depends(get_session)):
+    return await author_service.get_all_author_books(session, author_id)
+
+
 @author_router.get("/{author_id}", response_model=AuthorResponse)
 async def get_author(author_id: int, session: AsyncSession = Depends(get_session),
                      current_user: User = Depends(get_current_user)):
