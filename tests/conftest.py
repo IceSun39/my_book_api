@@ -6,7 +6,8 @@ from sqlalchemy.pool import NullPool
 
 from src.backend.main import app
 from src.backend.database import Base
-from src.backend.core.dependencies import get_current_admin_user, get_current_user, get_session
+from src.backend.database.database import get_session
+from src.backend.core.dependencies import get_current_admin_user, get_current_user
 from src.backend.models.user import User
 
 TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/book_api_test"

@@ -100,6 +100,21 @@ async def test_get_author_not_found(async_client: AsyncClient):
     assert response.status_code == 404
 
 
+@pytest.mark.asyncio
+async def  test_get_all_author_books(async_client: AsyncClient):
+    """Тест отримання всіх книг автора"""
+    # 1. Створюємо
+    create_response = await async_client.post("/api/authors/", json={
+        "fullname": "Григорій Сковорода",
+        "email": "skovoroda@test.com",
+        "book_ids": []
+    })
+    author_id = create_response.json()["author_id"]
+    response = await async_client.get(f"/api/authors/{author_id}/books")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
 # --- PUT (Оновлення) ---
 
 @pytest.mark.asyncio
