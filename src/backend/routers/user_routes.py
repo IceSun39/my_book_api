@@ -39,4 +39,4 @@ async def update_user(user_id: int, user: UserUpdate, session: AsyncSession = De
 @user_router.delete("/{user_id}", status_code=204)
 async def delete_user(user_id: int, session: AsyncSession = Depends(get_session),
                       admin_user: User = Depends(get_current_admin_user)):
-    deleted_user = user_services.delete_user(session, user_id)
+    deleted_user = await user_services.delete_user(session, user_id)
