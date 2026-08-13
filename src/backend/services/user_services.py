@@ -27,9 +27,9 @@ async def get_user(session: AsyncSession, user_id: int) -> UserResponse:
 
 
 async def add_user(session: AsyncSession, user_create: UserCreate) -> UserResponse:
-    existing_user = get_user_by_email(session, user_create.email)
+    existing_user = await get_user_by_email(session, user_create.email)
     if existing_user:
-        raise HTTPException(status_code=409, detail="Email already exist")
+        raise HTTPException(status_code=409, detail="Email already exists")
 
     hashed_password = get_password_hash(user_create.password)
 
