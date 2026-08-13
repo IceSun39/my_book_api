@@ -59,9 +59,9 @@ async def update_user(session: AsyncSession, user_id: int, user_update: UserUpda
         setattr(user, key, value)
 
     await session.commit()
-    await session.refresh(user)
-
-    return UserResponse.model_validate(user)
+    
+    complete_user = await _get_user_db(session, user_id)
+    return UserResponse.model_validate(complete_user)
 
 
 async def delete_user(session: AsyncSession, user_id: int) -> None:
