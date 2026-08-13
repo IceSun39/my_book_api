@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException
 
-from schemas.book_schemas import BookResponse
+from src.backend.schemas.book_schemas import BookResponse
 from src.backend.models.book import Book
 from src.backend.models.author import Author
 from src.backend.schemas.author_schemas import AuthorResponse, AuthorCreate
